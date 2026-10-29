@@ -1,0 +1,32 @@
+services:
+  # Legacy Service (ghcr.io/mccutchen/go-httpbin)
+  # Completely isolated on the internal network with no host port exposure
+  legacy-service:
+    image: ghcr.io/mccutchen/go-httpbin
+    container_name: legacy_httpbin
+    restart: unless-stopped
+    networks:
+      - internal_net
+    expose:
+      - "8080"
+
+  # Reverse Proxy with JWT Authentication
+  # Listens on port 80 (external) and forwards authorized requests to legacy-service
+  jwt-reverse-proxy:
+    build: .
+    container_name: jwt_reverse_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8081:80"
+    environment:
+      - JWT_SECRET=super-secure-jwt-secret-key-internet-engineering-2026-strictly-32bytes
+      - BACKEND_URL=http://legacy-service:8080
+    depends_on:
+      - legacy-service
+    networks:
+      - internal_net
+
+networks:
+  internal_net:
+    driver: bridge
